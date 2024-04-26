@@ -1,0 +1,13 @@
+version: '3.3'
+
+services:
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./volumes/redis/dаta:/root/redis
+      - ./volumes/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    env_file:
+      - .redis.env
