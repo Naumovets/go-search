@@ -135,8 +135,14 @@ func (w *Site) CompleteURL() (string, error) {
 			}
 		}
 
-		relativeURL := sliceBasedURL[2:]
-		domen = strings.Join(sliceBasedURL[:1], "")
+		var relativeURL []string
+		if sliceBasedURL[0] == "http:" || sliceBasedURL[0] == "https:" {
+			relativeURL = sliceBasedURL[2:]
+			domen = strings.Join(sliceBasedURL[:2], "//")
+		} else {
+			domen = sliceBasedURL[0]
+			relativeURL = sliceBasedURL[1:]
+		}
 		newURL = append(newURL, relativeURL...)
 	}
 

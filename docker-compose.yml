@@ -1,13 +1,37 @@
-version: '3.3'
+version: '3.9'
 
 services:
-  redis:
-    image: redis:latest
-    restart: always
-    ports:
-      - "6379:6379"
+
+  # db:
+  #   container_name: db
+  #   image: postgres
+  #   env_file: .db.env
+  #   volumes:
+  #      - db:/var/lib/postgresql/data
+  #      - ./assets/postgres/db/init.sql:/docker-entrypoint-initdb.d/1-schema.sql
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - postgres
+  #   restart: unless-stopped
+
+  url_queue:
+    container_name: url_queue
+    image: postgres
+    env_file: .url_queue.env
     volumes:
-      - ./volumes/redis/dаta:/root/redis
-      - ./volumes/redis/redis.conf:/usr/local/etc/redis/redis.conf
-    env_file:
-      - .redis.env
+       - url_queue:/var/lib/postgresql/data
+       - ./assets/postgres/queue/init.sql:/docker-entrypoint-initdb.d/1-schema.sql
+    ports:
+      - "4444:5432"
+    networks:
+      - postgres
+    restart: unless-stopped
+
+networks:
+  postgres:
+    driver: bridge
+
+volumes:
+    db:
+    url_queue:

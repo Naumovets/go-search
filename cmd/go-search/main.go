@@ -1,79 +1,74 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/Naumovets/go-search/internal/site"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 
-	// parent, err := parser.NewSite("https://tproger.ru/translations/data-structure-time-complexity-in-python")
-	site, err := site.NewSite("https://tproger.ru/translations/data-structure-time-complexity-in-python")
+	// site1, err := site.NewSite("https://habr.com/ru/articles/481556/")
 
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	// if err != nil {
+	// 	os.Exit(1)
+	// }
 
-	text, sites, err := site.GetText()
+	// site2, err := site.NewChildSite("..", *site1)
 
-	if err != nil {
-		fmt.Println("err:", err)
-		os.Exit(1)
-	}
+	// if err != nil {
+	// 	os.Exit(1)
+	// }
 
-	fmt.Printf("text: %s\n", text)
+	// cfg_queue, err := postgres.NewConfig(".url_queue.env")
 
-	for _, site := range sites {
-		url, err := site.CompleteURL()
+	// if err != nil {
+	// 	fmt.Printf("err: %s\n", err)
+	// 	os.Exit(1)
+	// }
 
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(url)
-		}
-	}
+	// db, err := postgres.NewConn(*cfg_queue)
 
-	// child, err := parser.NewChildSite("/tag/java/", *parent)
+	// if err != nil {
+	// 	fmt.Printf("err: %s\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// rep := tasks.NewRepository(db)
+
+	// // err = rep.AddTask([]site.Site{*site1, *site2})
+
+	// // if err != nil {
+	// // 	fmt.Println(err)
+	// // 	os.Exit(1)
+	// // }
+
+	// res, err := rep.GetLimitTasks(20)
 
 	// if err != nil {
 	// 	fmt.Println(err)
 	// 	os.Exit(1)
 	// }
 
-	// res, err := child.CompleteURL()
+	// ids := make([]int, 0)
+
+	// for _, item := range res {
+	// 	ids = append(ids, item.Id)
+	// }
+
+	// err = rep.CompleteTasks(ids)
 
 	// if err != nil {
 	// 	fmt.Println(err)
 	// }
 
-	// fmt.Println(res)
-	// fmt.Print(parent.BasedURL)
-
-	// text, links, err := parser.GetText("https://tilda.ru/ru/")
+	// res, err = rep.GetLimitTasks(20)
 
 	// if err != nil {
+	// 	fmt.Println(err)
 	// 	os.Exit(1)
 	// }
 
-	// // Создаем файл с именем "result.txt"
-	// file, err := os.Create("result.txt")
-	// if err != nil {
-	// 	fmt.Println("Ошибка при создании файла:", err)
-	// 	return
-	// }
-	// defer file.Close()
-
-	// // Записываем результат в файл
-	// _, err = file.WriteString(text)
-	// if err != nil {
-	// 	fmt.Println("Ошибка при записи в файл:", err)
-	// 	return
+	// for _, item := range res {
+	// 	fmt.Println(item)
 	// }
 
-	// for _, item := range links {
-	// 	fmt.Println(item.Url)
-	// }
 }
