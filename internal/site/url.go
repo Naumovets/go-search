@@ -3,11 +3,19 @@ package site
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 func GetBaseURL(url string) string {
-	re, _ := regexp.Compile(`^((http|https)://|)\w+[.]\w+`)
+	re, _ := regexp.Compile(`^((http|https)://|//|)\w+[.]\w+`)
 	res := re.FindString(url)
+
+	ok, _ := regexp.MatchString(`^//\w+`, res)
+
+	if ok {
+		res = strings.Split(res, "//")[1]
+	}
+
 	return res
 }
 

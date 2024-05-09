@@ -12,6 +12,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/redis/go-redis/v9 v9.5.1 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
+	github.com/zhashkevych/go-sqlxmock v1.5.2-0.20201023121933-f973d0041cfc // indirect
 	golang.org/x/net v0.24.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

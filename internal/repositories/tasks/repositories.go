@@ -5,49 +5,61 @@ import (
 	"strings"
 
 	"github.com/Naumovets/go-search/internal/entities"
+	log "github.com/Naumovets/go-search/internal/logger"
+	"github.com/Naumovets/go-search/internal/logger/sl"
 	"github.com/Naumovets/go-search/internal/site"
 	"github.com/jmoiron/sqlx"
 )
 
-type repository struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *repository {
-	return &repository{
+func NewRepository(db *sqlx.DB) *Repository {
+	return &Repository{
 		db: db,
 	}
 }
 
-func (r *repository) AddTask(sites []site.Site) error {
-	valueQuery := make([]string, 0)
-	valueArgs := make([]interface{}, 0) // Изменение: interface{} для универсальности
+func (r *Repository) AddTask(sites []site.Site) error {
 
-	i := 1
-	for _, site := range sites {
-		url, err := site.CompleteURL()
-		if err != nil {
-			// Обработка ошибки получения URL (например, логирование)
-			continue // Пропустить этот сайт, если возникла ошибка
+	// TODO: to add tasks in part for avoiding pg exeption
+	var valueQuery []string
+	var valueArgs []interface{}
+
+	var err error
+
+	for i := 0; i < (len(sites)/1000)+1; i++ {
+		for j := 1000 * i; j < min(len(sites), (i+1)*1000); j++ {
+			valueQuery = make([]string, 0)
+			valueArgs = make([]interface{}, 0)
+			i := 1
+			for _, site := range sites {
+				url, err := site.CompleteURL()
+				if err != nil {
+					log.Debug("Failed to complete url", sl.Err(err))
+					continue
+				}
+				valueQuery = append(valueQuery, fmt.Sprintf("($%d)", i))
+				valueArgs = append(valueArgs, url)
+				i++
+			}
+
+			query := fmt.Sprintf(`
+	  			INSERT INTO task (url)
+	  			VALUES %s
+				ON CONFLICT (url)
+				DO NOTHING`,
+				strings.Join(valueQuery, ", "))
+
+			_, err = r.db.Exec(query, valueArgs...)
 		}
-
-		valueQuery = append(valueQuery, fmt.Sprintf("($%d)", i))
-		valueArgs = append(valueArgs, url) // Добавляем url как interface{}
-		i++
 	}
 
-	query := fmt.Sprintf(`
-	  INSERT INTO task (url)
-	  VALUES %s
-	  ON CONFLICT (id) DO NOTHING;
-	`, strings.Join(valueQuery, ", "))
-
-	_, err := r.db.Exec(query, valueArgs...) // Использование оператора "..." для развертывания среза
-
-	return err // Вернуть ошибку, если она есть
+	return err
 }
 
-func (r *repository) GetActualLimitTasks(lim int) ([]entities.Task, error) {
+func (r *Repository) GetActualLimitTasks(lim int) ([]entities.Task, error) {
 	if lim <= 0 {
 		return nil, nil
 	}
@@ -77,12 +89,12 @@ func (r *repository) GetActualLimitTasks(lim int) ([]entities.Task, error) {
 	return rawTask, nil
 }
 
-func (r *repository) GetLimitTasks(lim int) ([]entities.Task, error) {
+func (r *Repository) GetLimitTasks(lim int) ([]entities.Task, error) {
 	if lim <= 0 {
 		return nil, nil
 	}
 
-	query := fmt.Sprintf(`SELECT id, url, task_status FROM task LIMIT %d`, lim)
+	query := fmt.Sprintf(`SELECT id, url, task_status FROM task ORDER BY id LIMIT %d`, lim)
 
 	rawTask := make([]entities.Task, 0)
 	err := r.db.Select(&rawTask, query)
@@ -94,7 +106,7 @@ func (r *repository) GetLimitTasks(lim int) ([]entities.Task, error) {
 	return rawTask, nil
 }
 
-func (r *repository) CompleteTasks(ids []int) error {
+func (r *Repository) CompleteTasks(ids []int) error {
 	if len(ids) == 0 {
 		return nil
 	}

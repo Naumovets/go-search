@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS task (
     id SERIAL PRIMARY KEY,
     task_status INTEGER NOT NULL,
-    url VARCHAR(511) NOT NULL
+    url VARCHAR(2047) NOT NULL UNIQUE
 );
 
 -- Установка значения по умолчанию после создания таблицы (опционально)

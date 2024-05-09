@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	log "github.com/Naumovets/go-search/internal/logger"
+	"github.com/Naumovets/go-search/internal/logger/sl"
 	"golang.org/x/net/html"
 )
 
@@ -23,13 +25,15 @@ type Siter interface {
 	baseURL() string
 	typeURL() TypeURL
 	CompleteURL() string
-	GetText() (string, []Site, error)
+	Analys() (string, []Site, error)
 }
 
 type Site struct {
+	Id       int
 	URL      string
 	BasedURL string
 	Type     TypeURL
+	Content  string
 }
 
 func NewSite(URL string) (*Site, error) {
@@ -41,7 +45,7 @@ func NewSite(URL string) (*Site, error) {
 	}
 
 	if isNotValid {
-		return nil, fmt.Errorf("url is not valid")
+		return nil, fmt.Errorf("url is not valid: %s", URL)
 	}
 
 	w := Site{
@@ -49,7 +53,7 @@ func NewSite(URL string) (*Site, error) {
 	}
 
 	if w.typeURL() == RelativeURL {
-		return nil, fmt.Errorf("err: URL is not absolute")
+		return nil, fmt.Errorf("err: URL is not absolute: %s", URL)
 	}
 	w.baseURL()
 	return &w, nil
@@ -64,7 +68,7 @@ func NewChildSite(URL string, parent Site) (*Site, error) {
 	}
 
 	if isNotValid {
-		return nil, fmt.Errorf("url is not valid")
+		return nil, fmt.Errorf("url is not valid: %s", URL)
 	}
 
 	w := Site{
@@ -84,7 +88,7 @@ func newSiteRelative(URL string, parent Site) (*Site, error) {
 	}
 
 	if w.typeURL() == FullURL {
-		return nil, fmt.Errorf("err: URL isn't relative")
+		return nil, fmt.Errorf("err: URL isn't relative: %s", URL)
 	}
 
 	w.BasedURL = parent.URL
@@ -99,7 +103,7 @@ func (w *Site) baseURL() string {
 }
 
 func (w *Site) typeURL() int {
-	re, _ := regexp.Compile(`^((http|https)://|)\w+[.]\w+`)
+	re, _ := regexp.Compile(`^((http|https)://|//)`)
 	res := re.MatchString(w.URL)
 	if res {
 		w.Type = FullURL
@@ -112,6 +116,11 @@ func (w *Site) typeURL() int {
 
 func (w *Site) CompleteURL() (string, error) {
 	if w.Type == FullURL {
+		re, _ := regexp.Compile(`^//.+`)
+		res := re.MatchString(w.URL)
+		if res {
+			return strings.Split(w.URL, "//")[1], nil
+		}
 		return w.URL, nil
 	}
 
@@ -153,13 +162,12 @@ func (w *Site) CompleteURL() (string, error) {
 			clearUrlSlice = append(clearUrlSlice, item)
 		}
 	}
-
 	for _, item := range clearUrlSlice {
 		if item == ".." {
-			if len(newURL) > 1 {
+			if len(newURL) > 0 {
 				newURL = newURL[:len(newURL)-1]
 			} else {
-				return "", fmt.Errorf("err: relative url is failed")
+				return "", fmt.Errorf("err: relative url is failed: %v", newURL)
 			}
 		} else {
 			newURL = append(newURL, item)
@@ -172,21 +180,21 @@ func (w *Site) CompleteURL() (string, error) {
 
 }
 
-func (site *Site) GetText() (string, []Site, error) {
+func (site *Site) Analys() ([]Site, error) {
 	resp, err := http.Get(site.URL)
 
 	links := make([]string, 0)
 	sites := make([]Site, 0)
 
 	if err != nil {
-		return "", nil, fmt.Errorf("err: %s", err)
+		return nil, fmt.Errorf("err: %s", err)
 	}
 
 	defer resp.Body.Close()
 
 	doc, err := html.Parse(resp.Body)
 	if err != nil {
-		return "", nil, fmt.Errorf("err: %s", err)
+		return nil, fmt.Errorf("err: %s", err)
 	}
 
 	results := parse(doc, &links, false)
@@ -195,12 +203,14 @@ func (site *Site) GetText() (string, []Site, error) {
 		newSite, err := NewChildSite(link, *site)
 
 		if err != nil {
-			fmt.Println("err: %w", err)
+			log.Debug("Failed to add new site", sl.Err(err))
 		} else {
 			sites = append(sites, *newSite)
 		}
 
 	}
 
-	return removeExtraSpaces(strings.Join(results, " ")), sites, nil
+	site.Content = removeExtraSpaces(strings.Join(results, " "))
+
+	return sites, nil
 }

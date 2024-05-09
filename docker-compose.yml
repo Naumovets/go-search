@@ -2,26 +2,26 @@ version: '3.9'
 
 services:
 
-  # db:
-  #   container_name: db
-  #   image: postgres
-  #   env_file: .db.env
-  #   volumes:
-  #      - db:/var/lib/postgresql/data
-  #      - ./assets/postgres/db/init.sql:/docker-entrypoint-initdb.d/1-schema.sql
-  #   ports:
-  #     - "5432:5432"
-  #   networks:
-  #     - postgres
-  #   restart: unless-stopped
-
-  url_queue:
-    container_name: url_queue
+  db:
+    container_name: db
     image: postgres
-    env_file: .url_queue.env
+    env_file: .db.env
     volumes:
-       - url_queue:/var/lib/postgresql/data
-       - ./assets/postgres/queue/init.sql:/docker-entrypoint-initdb.d/1-schema.sql
+       - db:/var/lib/postgresql/data
+       - ./assets/postgres/db/init.sql:/docker-entrypoint-initdb.d/1-schema.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - postgres
+    restart: unless-stopped
+
+  tasks:
+    container_name: tasks
+    image: postgres
+    env_file: .tasks.env
+    volumes:
+       - tasks:/var/lib/postgresql/data
+       - ./assets/postgres/tasks/init.sql:/docker-entrypoint-initdb.d/1-schema.sql
     ports:
       - "4444:5432"
     networks:
@@ -34,4 +34,4 @@ networks:
 
 volumes:
     db:
-    url_queue:
+    tasks:
