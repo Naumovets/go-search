@@ -15,7 +15,7 @@ func parse(el *html.Node, sites *[]string, isText bool) []string {
 
 		if c.Type == html.ElementNode && c.Data == "a" {
 			for _, item := range c.Attr {
-				if item.Key == "href" {
+				if item.Key == "href" && item.Val != "" {
 					*sites = append(*sites, item.Val)
 				}
 			}

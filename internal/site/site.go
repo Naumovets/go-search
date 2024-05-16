@@ -103,7 +103,7 @@ func (w *Site) baseURL() string {
 }
 
 func (w *Site) typeURL() int {
-	re, _ := regexp.Compile(`^((http|https)://|//)`)
+	re, _ := regexp.Compile(`^(?:(https?:\/\/)|(?:\/\/))?(?:[\w\p{L}-]+\.)+(?:[\w\p{L}-]{2,})(?:\.[\w\p{L}-]{2,})?`)
 	res := re.MatchString(w.URL)
 	if res {
 		w.Type = FullURL
@@ -203,7 +203,7 @@ func (site *Site) Analys() ([]Site, error) {
 		newSite, err := NewChildSite(link, *site)
 
 		if err != nil {
-			log.Debug("Failed to add new site", sl.Err(err))
+			log.Debug(fmt.Sprintf("Failed to add new site: %s", link), sl.Err(err))
 		} else {
 			sites = append(sites, *newSite)
 		}
@@ -212,5 +212,5 @@ func (site *Site) Analys() ([]Site, error) {
 
 	site.Content = removeExtraSpaces(strings.Join(results, " "))
 
-	return sites, nil
+	return sites, err
 }

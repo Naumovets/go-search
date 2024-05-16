@@ -13,6 +13,24 @@ type Config struct {
 	Env string
 }
 
+const (
+	envLocal = "local"
+	envProd  = "prod"
+)
+
+func SetupLogger(env string) *slog.Logger {
+	var log *slog.Logger
+
+	switch env {
+	case envLocal:
+		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	case envProd:
+		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	}
+
+	return log
+}
+
 func NewConfig(path string) (*Config, error) {
 	err := godotenv.Load(path)
 	if err != nil {

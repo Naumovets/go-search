@@ -7,7 +7,7 @@ import (
 )
 
 func GetBaseURL(url string) string {
-	re, _ := regexp.Compile(`^((http|https)://|//|)\w+[.]\w+`)
+	re, _ := regexp.Compile(`^(?:(https?:\/\/)|(?:\/\/))?(?:[\w\p{L}-]+\.)+(?:[\w\p{L}-]{2,})(?:\.[\w\p{L}-]{2,})?`)
 	res := re.FindString(url)
 
 	ok, _ := regexp.MatchString(`^//\w+`, res)
