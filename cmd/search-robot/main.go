@@ -17,8 +17,6 @@ import (
 func main() {
 
 	//TODO:
-	//set status (3) to complition error tasks
-	//design executing task memory
 	//rework no complete tasks with status (1)
 
 	cfg_queue, err := postgres.NewConfig(".tasks.env")
@@ -36,7 +34,7 @@ func main() {
 	}
 
 	logger.Log = logger.SetupLogger(loggerCfg.Env)
-	logger.Info("Starting go-search", slog.String("env", loggerCfg.Env))
+	logger.Info("Starting search-robot", slog.String("env", loggerCfg.Env))
 
 	db, err := postgres.NewConn(*cfg_queue)
 
@@ -71,5 +69,13 @@ func main() {
 
 	manager := manager.NewManager(rep)
 
-	manager.Start(10)
+	manager.Start(100)
+
+	// count, err := rep.GetCountCompleteTasks()
+
+	// if err != nil {
+	// 	logger.Debug("err", sl.Err(err))
+	// } else {
+	// 	logger.Info(fmt.Sprintf("%d", count))
+	// }
 }

@@ -23,8 +23,6 @@ func NewRepository(db *sqlx.DB) *Repository {
 
 func (r *Repository) AddTask(sites []site.Site) error {
 
-	// TODO: to add tasks in part for avoiding pg exeption
-
 	var err error
 
 	for i := 0; i < (len(sites)/1000)+1; i++ {
@@ -73,6 +71,25 @@ func (r *Repository) GetActualLimitTasks(lim int) ([]entities.Task, error) {
 	FROM next_task
 	WHERE task.id = next_task.id
 	RETURNING task.id, task.url, task.task_status;
+	`, lim)
+
+	rawTask := make([]entities.Task, 0)
+	err := r.db.Select(&rawTask, query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rawTask, nil
+}
+
+func (r *Repository) GetNoCompleteLimitTasks(lim int) ([]entities.Task, error) {
+	if lim <= 0 {
+		return nil, nil
+	}
+
+	query := fmt.Sprintf(`
+	SELECT id, url, task_status FROM task WHERE task_status=1 ORDER BY id LIMIT %d
 	`, lim)
 
 	rawTask := make([]entities.Task, 0)
@@ -142,5 +159,43 @@ func (r *Repository) CompleteTasks(ids []int) error {
 	}
 
 	return nil
+}
 
+func (r *Repository) CompleteWithError(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	valueQuery := make([]string, 0)
+	valueArgs := make([]interface{}, 0)
+
+	for i, id := range ids {
+		valueQuery = append(valueQuery, fmt.Sprintf("$%d", i+1))
+		valueArgs = append(valueArgs, id)
+	}
+
+	query := fmt.Sprintf(`UPDATE task
+							SET
+								task_status = 3
+							WHERE id IN (%s);`, strings.Join(valueQuery, ", "))
+	_, err := r.db.Exec(query, valueArgs...)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) GetCountCompleteTasks() (int, error) {
+	query := "SELECT COUNT(*) FROM task WHERE task_status=2 GROUP BY task_status"
+
+	count := make([]int, 0)
+	err := r.db.Select(&count, query)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count[0], nil
 }
