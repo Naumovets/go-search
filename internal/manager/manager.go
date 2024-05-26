@@ -17,45 +17,45 @@ import (
 )
 
 type Manager struct {
-	queue_tasks *queue.Queue[entities.Task]
-	repository  *tasks.Repository
-	mu          sync.Mutex
+	queueTasks *queue.Queue[entities.Task]
+	repository *tasks.Repository
+	mu         sync.Mutex
 }
 
 func NewManager(rep *tasks.Repository) *Manager {
 	return &Manager{
-		queue_tasks: queue.NewQueue[entities.Task](),
-		repository:  rep,
+		queueTasks: queue.NewQueue[entities.Task](),
+		repository: rep,
 	}
 }
 
-func (m *Manager) Start(count_tasks int) {
+func (m *Manager) Start(countTasks int) {
 
 	for {
 		// get tasks to queue
-		tasks, err := m.repository.GetNoCompleteLimitTasks(count_tasks)
+		tasks, err := m.repository.GetNoCompleteLimitTasks(countTasks)
 		log.Info(fmt.Sprintf("%d", len(tasks)))
-		var actual_tasks []entities.Task
+		var actualTasks []entities.Task
 
 		if err != nil {
 			log.Debug("Failed to get no complete tasks", sl.Err(err))
-			actual_tasks, err = m.repository.GetActualLimitTasks(count_tasks)
+			actualTasks, err = m.repository.GetActualLimitTasks(countTasks)
 			if err != nil {
 				log.Debug("Failed to get tasks", sl.Err(err))
 				return
 			}
-			tasks = actual_tasks
+			tasks = actualTasks
 
-		} else if len(tasks) < count_tasks {
-			actual_tasks, err = m.repository.GetActualLimitTasks(count_tasks - len(tasks))
+		} else if len(tasks) < countTasks {
+			actualTasks, err = m.repository.GetActualLimitTasks(countTasks - len(tasks))
 			if err != nil {
 				log.Debug("Failed to get tasks", sl.Err(err))
 			} else {
-				tasks = append(tasks, actual_tasks...)
+				tasks = append(tasks, actualTasks...)
 			}
 		}
 
-		// tasks, err := m.repository.GetActualLimitTasks(count_tasks)
+		// tasks, err := m.repository.GetActualLimitTasks(countTasks)
 
 		// if err != nil {
 		// 	log.Debug("Failed to get tasks", sl.Err(err))
@@ -63,7 +63,7 @@ func (m *Manager) Start(count_tasks int) {
 		// }
 
 		for _, task := range tasks {
-			m.queue_tasks.Add(task)
+			m.queueTasks.Add(task)
 		}
 
 		var wg sync.WaitGroup
@@ -90,11 +90,11 @@ func (m *Manager) Start(count_tasks int) {
 func (m *Manager) work() {
 
 	m.mu.Lock()
-	task, task_err := m.queue_tasks.Pop()
+	task, taskErr := m.queueTasks.Pop()
 	m.mu.Unlock()
 
 	sites := make([]site.Site, 0)
-	for task_err == nil {
+	for taskErr == nil {
 
 		site, err := site.NewSite(task.SiteURL)
 
@@ -107,7 +107,7 @@ func (m *Manager) work() {
 		sites = append(sites, *site)
 
 		m.mu.Lock()
-		task, task_err = m.queue_tasks.Pop()
+		task, taskErr = m.queueTasks.Pop()
 		m.mu.Unlock()
 	}
 
@@ -118,29 +118,29 @@ func (m *Manager) work() {
 
 	robot := robot.NewRobot(m.repository)
 	robot.AddList(sites)
-	new_sites, success_ids, unsuccess_ids := robot.Work()
+	newSites, successIds, unsuccessIds := robot.Work()
 
-	if len(new_sites) > 0 {
-		err := m.repository.AddTask(new_sites)
+	if len(newSites) > 0 {
+		err := m.repository.AddTask(newSites)
 		if err != nil {
 			log.Debug("Failed to add task", sl.Err(err))
 			return
 		}
 	}
 
-	if len(success_ids) > 0 {
-		err := m.repository.CompleteTasks(success_ids)
+	if len(successIds) > 0 {
+		err := m.repository.CompleteTasks(successIds)
 		if err != nil {
 			log.Debug("Failed to complete tasks", sl.Err(err))
 		}
 	}
 
-	if len(unsuccess_ids) > 0 {
-		err := m.repository.CompleteWithError(unsuccess_ids)
+	if len(unsuccessIds) > 0 {
+		err := m.repository.CompleteWithError(unsuccessIds)
 		if err != nil {
 			log.Debug("Failed to point error tasks", sl.Err(err))
 		}
 	}
 
-	log.Info(fmt.Sprintf("c. sites: %d c. success_ids: %d c. unsuccess_ids: %d", len(new_sites), len(success_ids), len(unsuccess_ids)))
+	log.Info(fmt.Sprintf("c. sites: %d c. successIds: %d c. unsuccessIds: %d", len(newSites), len(successIds), len(unsuccessIds)))
 }

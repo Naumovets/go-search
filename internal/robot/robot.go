@@ -13,19 +13,19 @@ import (
 )
 
 type Robot struct {
-	queue         queue.Queue[site.Site]
-	new_sites     []site.Site
-	success_ids   []int
-	unsuccess_ids []int
-	mu            sync.Mutex
-	repository    *tasks.Repository
+	queue        queue.Queue[site.Site]
+	newSites     []site.Site
+	successIds   []int
+	unsuccessIds []int
+	mu           sync.Mutex
+	repository   *tasks.Repository
 }
 
 func NewRobot(rep *tasks.Repository) *Robot {
 	return &Robot{
-		repository:  rep,
-		queue:       *queue.NewQueue[site.Site](),
-		success_ids: make([]int, 0),
+		repository: rep,
+		queue:      *queue.NewQueue[site.Site](),
+		successIds: make([]int, 0),
 	}
 }
 
@@ -53,15 +53,15 @@ func (r *Robot) Work() ([]site.Site, []int, []int) {
 			continue
 		}
 
-		new_sites, err := site.Analys()
+		newSites, err := site.Analys()
 
 		if err != nil {
 			log.Debug("Failed to analys site", sl.Err(err))
-			r.unsuccess_ids = append(r.unsuccess_ids, site.Id)
+			r.unsuccessIds = append(r.unsuccessIds, site.Id)
 			continue
 		}
-		r.success_ids = append(r.success_ids, site.Id)
-		r.new_sites = append(r.new_sites, new_sites...)
+		r.successIds = append(r.successIds, site.Id)
+		r.newSites = append(r.newSites, newSites...)
 	}
-	return r.new_sites, r.success_ids, r.unsuccess_ids
+	return r.newSites, r.successIds, r.unsuccessIds
 }

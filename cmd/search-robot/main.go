@@ -19,7 +19,7 @@ func main() {
 	//TODO:
 	//rework no complete tasks with status (1)
 
-	cfg_queue, err := postgres.NewConfig(".tasks.env")
+	cfgQueue, err := postgres.NewConfig(".tasks.env")
 
 	if err != nil {
 		log.Fatalf("err: %s\n", err)
@@ -36,7 +36,7 @@ func main() {
 	logger.Log = logger.SetupLogger(loggerCfg.Env)
 	logger.Info("Starting search-robot", slog.String("env", loggerCfg.Env))
 
-	db, err := postgres.NewConn(*cfg_queue)
+	db, err := postgres.NewConn(*cfgQueue)
 
 	if err != nil {
 		log.Fatalf("err: %s\n", err)
@@ -53,13 +53,13 @@ func main() {
 	}
 
 	if !exists {
-		first_site, err := site.NewSite("https://ru.wikipedia.org/wiki/Заглавная_страница")
+		firstSite, err := site.NewSite("https://ru.wikipedia.org/wiki/Заглавная_страница")
 
 		if err != nil {
 			os.Exit(1)
 		}
 
-		err = rep.AddTask([]site.Site{*first_site})
+		err = rep.AddTask([]site.Site{*firstSite})
 
 		if err != nil {
 			log.Fatalf("err: %s", err)
