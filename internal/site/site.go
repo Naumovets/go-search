@@ -33,6 +33,7 @@ type Site struct {
 	URL      string
 	BasedURL string
 	Type     TypeURL
+	Title    string
 	Content  string
 }
 
@@ -197,7 +198,7 @@ func (site *Site) Analys() ([]Site, error) {
 		return nil, fmt.Errorf("err: %s", err)
 	}
 
-	results := parse(doc, &links, false)
+	content, title := parse(doc, &links, false)
 
 	for _, link := range links {
 		newSite, err := NewChildSite(link, *site)
@@ -210,7 +211,8 @@ func (site *Site) Analys() ([]Site, error) {
 
 	}
 
-	site.Content = removeExtraSpaces(strings.Join(results, " "))
+	site.Content = removeExtraSpaces(strings.Join(content, " "))
+	site.Title = removeExtraSpaces(strings.Join(title, " "))
 
 	return sites, err
 }

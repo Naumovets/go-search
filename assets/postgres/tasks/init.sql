@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS task (
 -- Установка значения по умолчанию после создания таблицы (опционально)
 ALTER TABLE task ALTER COLUMN task_status SET DEFAULT 0; 
 
-CREATE INDEX task__task_status__idx on task (task_status);
+CREATE INDEX IF NOT EXISTS task__task_status__idx on task (task_status);
