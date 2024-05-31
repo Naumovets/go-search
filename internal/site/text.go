@@ -31,3 +31,18 @@ func removeExtraSpaces(text string) string {
 	space := regexp.MustCompile(`\s+`)
 	return space.ReplaceAllString(text, " ")
 }
+
+func IsRussianText(text string) bool {
+	russianCount := 0
+	englishCount := 0
+
+	for _, char := range text {
+		if (char >= 'а' && char <= 'я') || (char >= 'А' && char <= 'Я') {
+			russianCount++
+		} else if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
+			englishCount++
+		}
+	}
+
+	return russianCount > englishCount
+}

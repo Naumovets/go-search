@@ -29,13 +29,13 @@ func NewRobot(rep *tasks.Repository) *Robot {
 	}
 }
 
-func (r *Robot) AddOne(s site.Site) {
+func (r *Robot) AddOne(s *site.Site) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.queue.Add(s)
 }
 
-func (r *Robot) AddList(l []site.Site) {
+func (r *Robot) AddList(l []*site.Site) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for _, item := range l {

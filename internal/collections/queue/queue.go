@@ -1,23 +1,27 @@
 package queue
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type Queue[T any] struct {
 	first *node[T]
 	last  *node[T]
 	Count int
+	Mu    sync.Mutex
 }
 
 type node[T any] struct {
 	next  *node[T]
-	value T
+	value *T
 }
 
 func NewQueue[T any]() *Queue[T] {
 	return &Queue[T]{}
 }
 
-func (q *Queue[T]) Add(val T) {
+func (q *Queue[T]) Add(val *T) {
 	n := &node[T]{
 		value: val,
 	}
@@ -30,10 +34,9 @@ func (q *Queue[T]) Add(val T) {
 	q.Count++
 }
 
-func (q *Queue[T]) Pop() (T, error) {
+func (q *Queue[T]) Pop() (*T, error) {
 	if q.Count == 0 {
-		var zero T
-		return zero, fmt.Errorf("err: queue if empty")
+		return nil, fmt.Errorf("err: queue if empty")
 	}
 
 	val := q.first.value

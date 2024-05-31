@@ -2,24 +2,19 @@ package postgres
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Naumovets/go-search/internal/db"
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
-func NewConfig(path string) (*db.Config, error) {
-	err := godotenv.Load(path)
-	if err != nil {
-		return nil, fmt.Errorf("cannot load env from %s", path)
+func NewConfig(path string) (db.Config, error) {
+	viper.SetConfigFile(path)
+	if err := viper.ReadInConfig(); err != nil {
+		return db.Config{}, fmt.Errorf("cannot read config from %s: %w", path, err)
 	}
-
-	return &db.Config{
-		DB_HOST:  os.Getenv("DB_HOST"),
-		DB_PORT:  os.Getenv("DB_PORT"),
-		DB_NAME:  os.Getenv("DB_NAME"),
-		PASSWORD: os.Getenv("POSTGRES_PASSWORD"),
-		USER:     os.Getenv("POSTGRES_USER"),
-	}, nil
-
+	var cfg db.Config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return db.Config{}, fmt.Errorf("cannot unmarshal config: %w", err)
+	}
+	return cfg, nil
 }

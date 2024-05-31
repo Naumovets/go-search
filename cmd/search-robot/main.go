@@ -9,6 +9,7 @@ import (
 	"github.com/Naumovets/go-search/internal/db/postgres"
 	"github.com/Naumovets/go-search/internal/logger"
 	"github.com/Naumovets/go-search/internal/manager"
+	"github.com/Naumovets/go-search/internal/repositories/db"
 	"github.com/Naumovets/go-search/internal/repositories/tasks"
 	"github.com/Naumovets/go-search/internal/site"
 	_ "github.com/lib/pq"
@@ -16,16 +17,7 @@ import (
 
 func main() {
 
-	//TODO:
-	//rework no complete tasks with status (1)
-
-	cfgQueue, err := postgres.NewConfig(".tasks.env")
-
-	if err != nil {
-		log.Fatalf("err: %s\n", err)
-		os.Exit(1)
-	}
-
+	// setting logger
 	loggerCfg, err := logger.NewConfig(".env")
 
 	if err != nil {
@@ -36,16 +28,24 @@ func main() {
 	logger.Log = logger.SetupLogger(loggerCfg.Env)
 	logger.Info("Starting search-robot", slog.String("env", loggerCfg.Env))
 
-	db, err := postgres.NewConn(*cfgQueue)
+	// // setting tasks
+	cfgQueue, err := postgres.NewConfig(".tasks.env")
 
 	if err != nil {
 		log.Fatalf("err: %s\n", err)
 		os.Exit(1)
 	}
 
-	rep := tasks.NewRepository(db)
+	dbTask, err := postgres.NewConn(cfgQueue)
 
-	exists, err := rep.ExistActualTask()
+	if err != nil {
+		log.Fatalf("err: %s\n", err)
+		os.Exit(1)
+	}
+
+	taskRep := tasks.NewRepository(dbTask)
+
+	exists, err := taskRep.ExistActualTask()
 
 	if err != nil {
 		log.Fatalf("err: %s\n", err)
@@ -59,7 +59,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = rep.AddTask([]site.Site{*firstSite})
+		err = taskRep.AddTask([]site.Site{*firstSite})
 
 		if err != nil {
 			log.Fatalf("err: %s", err)
@@ -67,15 +67,30 @@ func main() {
 		}
 	}
 
-	manager := manager.NewManager(rep)
+	// setting db
+	cfgDB, err := postgres.NewConfig(".db.env")
+
+	if err != nil {
+		log.Fatalf("err: %s\n", err)
+		os.Exit(1)
+	}
+
+	dbConn, err := postgres.NewConn(cfgDB)
+
+	if err != nil {
+		log.Fatalf("err: %s\n", err)
+		os.Exit(1)
+	}
+
+	dbRep := db.NewRepository(dbConn)
+
+	if err != nil {
+		log.Fatalf("err: %s\n", err)
+		os.Exit(2)
+	}
+
+	manager := manager.NewManager(taskRep, dbRep)
 
 	manager.Start(100)
 
-	// count, err := rep.GetCountCompleteTasks()
-
-	// if err != nil {
-	// 	logger.Debug("err", sl.Err(err))
-	// } else {
-	// 	logger.Info(fmt.Sprintf("%d", count))
-	// }
 }

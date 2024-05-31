@@ -29,7 +29,8 @@ func TestAdd(t *testing.T) {
 		require.Equal(t, q.Count, 0, "err: q.Count = %d, but must be 0", q.Count)
 
 		for i := 0; i < test.len; i++ {
-			q.Add(fmt.Sprintf("str number %d", i))
+			str := fmt.Sprintf("str number %d", i)
+			q.Add(&str)
 		}
 
 		assert.Equal(t, q.Count, test.len, fmt.Sprintf("err: q.Count = %d, but must be %d", q.Count, test.len))
@@ -44,10 +45,9 @@ func TestPop(t *testing.T) {
 	q := NewQueue[string]()
 
 	str := make([]string, 0)
-	var newStr string
 	for i := 0; i < 10; i++ {
-		newStr = fmt.Sprintf("str number %d", i)
-		q.Add(newStr)
+		newStr := fmt.Sprintf("str number %d", i)
+		q.Add(&newStr)
 		str = append(str, newStr)
 	}
 
@@ -58,8 +58,8 @@ func TestPop(t *testing.T) {
 			assert.Equal(t, i, 10, fmt.Sprintf("err: %s\nnum: %d", err, i))
 		}
 
-		if i != 10 && val != str[i] {
-			t.Errorf("err: %s != %s", val, str[i])
+		if i != 10 && *val != str[i] {
+			t.Errorf("err: %s != %s", *val, str[i])
 		}
 	}
 
@@ -69,7 +69,7 @@ func TestPop(t *testing.T) {
 func BenchmarkAdd(b *testing.B) {
 	q := NewQueue[int]()
 	for i := 0; i < b.N; i++ {
-		q.Add(i)
+		q.Add(&i)
 	}
 
 	for i := 0; i < b.N; i++ {

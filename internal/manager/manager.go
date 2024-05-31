@@ -11,6 +11,7 @@ import (
 	"github.com/Naumovets/go-search/internal/entities"
 	log "github.com/Naumovets/go-search/internal/logger"
 	"github.com/Naumovets/go-search/internal/logger/sl"
+	"github.com/Naumovets/go-search/internal/repositories/db"
 	"github.com/Naumovets/go-search/internal/repositories/tasks"
 	"github.com/Naumovets/go-search/internal/robot"
 	"github.com/Naumovets/go-search/internal/site"
@@ -18,14 +19,15 @@ import (
 
 type Manager struct {
 	queueTasks *queue.Queue[entities.Task]
-	repository *tasks.Repository
-	mu         sync.Mutex
+	taskRep    *tasks.Repository
+	dbRep      *db.Repository
 }
 
-func NewManager(rep *tasks.Repository) *Manager {
+func NewManager(taskRep *tasks.Repository, dbRep *db.Repository) *Manager {
 	return &Manager{
 		queueTasks: queue.NewQueue[entities.Task](),
-		repository: rep,
+		taskRep:    taskRep,
+		dbRep:      dbRep,
 	}
 }
 
@@ -33,13 +35,12 @@ func (m *Manager) Start(countTasks int) {
 
 	for {
 		// get tasks to queue
-		tasks, err := m.repository.GetNoCompleteLimitTasks(countTasks)
-		log.Info(fmt.Sprintf("%d", len(tasks)))
+		tasks, err := m.taskRep.GetNoCompleteLimitTasks(countTasks)
 		var actualTasks []entities.Task
 
 		if err != nil {
 			log.Debug("Failed to get no complete tasks", sl.Err(err))
-			actualTasks, err = m.repository.GetActualLimitTasks(countTasks)
+			actualTasks, err = m.taskRep.GetActualLimitTasks(countTasks)
 			if err != nil {
 				log.Debug("Failed to get tasks", sl.Err(err))
 				return
@@ -47,7 +48,7 @@ func (m *Manager) Start(countTasks int) {
 			tasks = actualTasks
 
 		} else if len(tasks) < countTasks {
-			actualTasks, err = m.repository.GetActualLimitTasks(countTasks - len(tasks))
+			actualTasks, err = m.taskRep.GetActualLimitTasks(countTasks - len(tasks))
 			if err != nil {
 				log.Debug("Failed to get tasks", sl.Err(err))
 			} else {
@@ -55,7 +56,7 @@ func (m *Manager) Start(countTasks int) {
 			}
 		}
 
-		// tasks, err := m.repository.GetActualLimitTasks(countTasks)
+		// tasks, err := m.taskRep.GetActualLimitTasks(countTasks)
 
 		// if err != nil {
 		// 	log.Debug("Failed to get tasks", sl.Err(err))
@@ -63,12 +64,12 @@ func (m *Manager) Start(countTasks int) {
 		// }
 
 		for _, task := range tasks {
-			m.queueTasks.Add(task)
+			m.queueTasks.Add(&task)
 		}
 
 		var wg sync.WaitGroup
 
-		maxProcs := 5
+		maxProcs := 7
 		count := maxProcs
 
 		wg.Add(count)
@@ -89,11 +90,11 @@ func (m *Manager) Start(countTasks int) {
 
 func (m *Manager) work() {
 
-	m.mu.Lock()
+	m.queueTasks.Mu.Lock()
 	task, taskErr := m.queueTasks.Pop()
-	m.mu.Unlock()
+	m.queueTasks.Mu.Unlock()
 
-	sites := make([]site.Site, 0)
+	sites := make([]*site.Site, 0)
 	for taskErr == nil {
 
 		site, err := site.NewSite(task.SiteURL)
@@ -104,11 +105,11 @@ func (m *Manager) work() {
 		}
 
 		site.Id = task.Id
-		sites = append(sites, *site)
+		sites = append(sites, site)
 
-		m.mu.Lock()
+		m.queueTasks.Mu.Lock()
 		task, taskErr = m.queueTasks.Pop()
-		m.mu.Unlock()
+		m.queueTasks.Mu.Unlock()
 	}
 
 	if len(sites) == 0 {
@@ -116,12 +117,12 @@ func (m *Manager) work() {
 		return
 	}
 
-	robot := robot.NewRobot(m.repository)
+	robot := robot.NewRobot(m.taskRep)
 	robot.AddList(sites)
 	newSites, successIds, unsuccessIds := robot.Work()
 
 	if len(newSites) > 0 {
-		err := m.repository.AddTask(newSites)
+		err := m.taskRep.AddTask(newSites)
 		if err != nil {
 			log.Debug("Failed to add task", sl.Err(err))
 			return
@@ -129,14 +130,21 @@ func (m *Manager) work() {
 	}
 
 	if len(successIds) > 0 {
-		err := m.repository.CompleteTasks(successIds)
+		successSites := getCompletedSites(sites, successIds)
+		err := m.dbRep.AddSites(successSites)
+
+		if err != nil {
+			log.Debug("Failed to add sites to db", sl.Err(err))
+		}
+
+		err = m.taskRep.CompleteTasks(successIds)
 		if err != nil {
 			log.Debug("Failed to complete tasks", sl.Err(err))
 		}
 	}
 
 	if len(unsuccessIds) > 0 {
-		err := m.repository.CompleteWithError(unsuccessIds)
+		err := m.taskRep.CompleteWithError(unsuccessIds)
 		if err != nil {
 			log.Debug("Failed to point error tasks", sl.Err(err))
 		}

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS website (
     url VARCHAR(511) NOT NULL PRIMARY KEY,
-    title char(255),
+    title VARCHAR(255),
     content TEXT NOT NULL
 );
 
