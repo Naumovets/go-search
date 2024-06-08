@@ -98,11 +98,18 @@ func (r *Repository) Search(userQuery string, lim int, page int) ([]entities.Web
 	}
 
 	query := fmt.Sprintf(`
-					SELECT url, content, title 
-					FROM website 
-					WHERE content_tsv @@ plainto_tsquery('%s', '%s')
-					LIMIT %d 
-					OFFSET %d`,
+		SELECT url, 
+       	CASE 
+    		WHEN LENGTH(content) > 200 THEN SUBSTRING(content, 1, 200) || '...'
+           	ELSE content 
+       	END AS content, 
+       	title
+      	FROM website
+      	WHERE content_tsv @@ plainto_tsquery('%s', '%s')
+      	ORDER BY ts_rank(content_tsv, plainto_tsquery('%s', '%s')) DESC
+      	LIMIT %d OFFSET %d;`,
+		lang,
+		userQuery,
 		lang,
 		userQuery,
 		lim,
